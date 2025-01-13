@@ -1,8 +1,9 @@
 ## Question 1. Knowing docker tags
-`docker run --help`
+using `docker --help`
 
 Answer: `rmi`
-
+or using `docker image --help`
+Answer:
 
 ### Question 2. Understanding docker first run
 ` docker run -it --entrypoint bash python:3.12.8 `
@@ -79,6 +80,8 @@ FROM
 	INNER JOIN PUBLIC.ZONES DOZ ON G."DOLocationID" = DOZ."LocationID"
 WHERE
 	PUZ."Zone" = 'East Harlem North'
+	AND EXTRACT( YEAR FROM LPEP_PICKUP_DATETIME) = 2019
+	AND EXTRACT( MONTH FROM LPEP_PICKUP_DATETIME) = 10
 GROUP BY
 	1
 ORDER BY
