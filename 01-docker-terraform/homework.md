@@ -1,31 +1,31 @@
-## Question 1. Knowing docker tags
-using `docker --help`
-
-Answer: `rmi`
-or using `docker image --help`
-Answer:
-
-### Question 2. Understanding docker first run
+## Question 1. Understanding docker first run
 ` docker run -it --entrypoint bash python:3.12.8 `
 
 `pip list`
 
 Answer: ``24.3.1``
 
-## Question 3. Count records
-How many taxi trips were made on October 18th, 2019?
+### Question 2. Understanding Docker networking and docker-compose
 
-(Trips that started and finished on that day)
+Answer: `db:5432`
 
-Answer: <mark>17417</mark>
+## Question 3. Trip Segmentation Count
+
+Answer: <mark>104,793; 198,924; 109,603; 27,678; 35,189</mark> 
 ```sql
 SELECT
-	COUNT(*)
+    COUNT(CASE WHEN trip_distance <= 1.0 THEN 1 END) AS up_to_1_mile,
+    COUNT(CASE WHEN trip_distance > 1.0 AND trip_distance <= 3.0 THEN 1 END) AS between_1_and_3_miles,
+    COUNT(CASE WHEN trip_distance > 3.0 AND trip_distance <= 7.0 THEN 1 END) AS between_3_and_7_miles,
+    COUNT(CASE WHEN trip_distance > 7.0 AND trip_distance <= 10.0 THEN 1 END) AS between_7_and_10_miles,
+    COUNT(CASE WHEN trip_distance > 10.0 THEN 1 END) AS over_10_miles
 FROM
-	PUBLIC.GREEN_TAXI_DATA
+    public.green_taxi_data
 WHERE
-	DATE (LPEP_PICKUP_DATETIME) = '2019-10-18'
-	AND DATE (LPEP_DROPOFF_DATETIME) = '2019-10-18';
+    date(lpep_pickup_datetime) >= '2019-10-01' AND
+    date(lpep_dropoff_datetime) < '2019-11-01' AND
+    date(lpep_dropoff_datetime) >= '2019-10-01' AND
+    date(lpep_dropoff_datetime) < '2019-11-01';
 ```
 ## Question 4. Longest trip for each day
 Which was the pick up day with the longest trip distance? Use the pick up time for your calculations.
