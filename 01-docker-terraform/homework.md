@@ -1,13 +1,17 @@
 ## Question 1. Understanding docker first run
-` docker run -it --entrypoint bash python:3.12.8 `
+```bash
+docker run -it --entrypoint bash python:3.12.8
+```
 
-`pip list`
+```bash
+pip list
+```
 
-Answer: ``24.3.1``
+Answer: <mark>24.3.1</mark>
 
 ### Question 2. Understanding Docker networking and docker-compose
 
-Answer: `db:5432`
+Answer: <mark> db:5432 </mark>
 
 ## Question 3. Trip Segmentation Count
 
@@ -89,3 +93,11 @@ ORDER BY
 LIMIT
 	1;
 ```
+## Question 7. Terraform Workflow
+Which of the following sequences, respectively, describes the workflow for:
+
+1. Downloading the provider plugins and setting up backend,
+2. Generating proposed changes and auto-executing the plan
+3. Remove all resources managed by terraform
+
+Answer: <mark> terraform init, terraform apply -auto-approve, terraform destroy </mark>
