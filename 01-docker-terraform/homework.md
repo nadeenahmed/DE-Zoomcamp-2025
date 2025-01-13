@@ -27,7 +27,7 @@ FROM
     public.green_taxi_data
 WHERE
     date(lpep_pickup_datetime) >= '2019-10-01' AND
-    date(lpep_dropoff_datetime) < '2019-11-01' AND
+    date(lpep_pickup_datetime) < '2019-11-01' AND
     date(lpep_dropoff_datetime) >= '2019-10-01' AND
     date(lpep_dropoff_datetime) < '2019-11-01';
 ```
