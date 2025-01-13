@@ -1,5 +1,6 @@
 ## Question 1. Knowing docker tags
 `docker run --help`
+
 Answer: `rmi`
 
 
@@ -7,6 +8,7 @@ Answer: `rmi`
 ` docker run -it --entrypoint bash python:3.12.8 `
 
 `pip list`
+
 Answer: ``24.3.1``
 
 ## Question 3. Count records
@@ -14,7 +16,7 @@ How many taxi trips were made on October 18th, 2019?
 
 (Trips that started and finished on that day)
 
-answer: 17417
+Answer: <mark>17417</mark>
 ```sql
 SELECT
 	COUNT(*)
@@ -27,7 +29,7 @@ WHERE
 ## Question 4. Longest trip for each day
 Which was the pick up day with the longest trip distance? Use the pick up time for your calculations.
 
-answer: 2019-10-31
+Answer: <mark>2019-10-31</mark>
 ```sql
 SELECT
 	EXTRACT( DAY FROM LPEP_PICKUP_DATETIME) AS DAY,
@@ -46,7 +48,7 @@ Which where the top pickup locations with over 13,000 in total_amount (across al
 
 Consider only lpep_pickup_datetime when filtering by date.
 
-answer: East Harlem North, East Harlem South, Morningside Heights
+Answer: <mark>East Harlem North, East Harlem South, Morningside Heights</mark>
 ```sql
 SELECT
 	PUZ."Zone" AS PICKUP_LOCATION,
@@ -65,7 +67,7 @@ HAVING
 ## Question 6. Largest tip
 For the passengers picked up in Ocrober 2019 in the zone name "East Harlem North" which was the drop off zone that had the largest tip?
 
-answer: JFK Airport
+Answer: <mark>JFK Airport</mark>
 
 ```sql
 SELECT
