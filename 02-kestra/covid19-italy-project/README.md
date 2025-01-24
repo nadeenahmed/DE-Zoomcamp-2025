@@ -5,7 +5,7 @@ This project is part of the Data Engineering Zoomcamp by DataTalksClub. It focus
 1. [Project Overview](#overview)
 2. [Dataset](#dataset)
 3. [Workflow Steps](#steps)
-4. [Tools and Technologies](##tools)
+4. [Tools and Technologies](#tools)
 
 ---
 
