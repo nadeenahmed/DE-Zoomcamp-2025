@@ -1,0 +1,266 @@
+id: postgres_covid19_generic
+namespace: zoomcamp
+inputs:
+  - id: table_name
+    type: SELECT
+    displayName: Select table name
+    values: [province, region]
+    defaults: region
+
+variables:
+  file: "italy_{{inputs.table_name}}.csv"
+  staging_table: "public.italy_{{inputs.table_name}}_staging"
+  table: "public.italy_{{inputs.table_name}}"
+
+tasks:
+  - id: set_label
+    type: io.kestra.plugin.core.execution.Labels
+    labels:
+      file: "{{render(vars.file)}}"
+      table_name: "{{inputs.table_name}}"
+  - id: if_italy_province
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{inputs.table_name == 'province'}}"
+    then:
+    - id: extract_province
+      type: io.kestra.plugin.scripts.shell.Commands
+      outputFiles:
+        - "*.csv"
+      taskRunner:
+        type: io.kestra.plugin.core.runner.Process
+      commands:
+        - wget -qO- https://raw.githubusercontent.com/RamiKrispin/covid19Italy/master/csv/italy_province.csv |
+          cut -d, -f1-11 |
+          awk -F, 'BEGIN {OFS=","} {for (i=1; i<=NF; i++) if ($i == "NA") $i = 0} 1' > italy_province.csv
+
+    - id: province_create_table
+      type: io.kestra.plugin.jdbc.postgresql.Queries
+      sql: |
+            CREATE TABLE IF NOT EXISTS italy_province (
+                unique_row_id          text,
+                date                  date,
+                region_name               text,
+                region_code            integer,
+                province_name            text,
+                province_spatial          text,
+                province_abb          text,
+                province_code  text,
+                lat              double precision,
+                long             double precision,
+                new_cases    integer,
+                total_cases   integer
+                );
+    - id: province_create_staging_table
+      type: io.kestra.plugin.jdbc.postgresql.Queries
+      sql: |
+            CREATE TABLE IF NOT EXISTS italy_province_staging (
+                unique_row_id          text,
+                date                  date,
+                region_name               text,
+                region_code            integer,
+                province_name            text,
+                province_spatial          text,
+                province_abb          text,
+                province_code  text,
+                lat              double precision,
+                long             double precision,
+                new_cases    integer,
+                total_cases   integer
+                );
+    - id: province_truncate_staging_table
+      type: io.kestra.plugin.jdbc.postgresql.Queries
+      sql: |
+          TRUNCATE TABLE italy_province_staging;
+
+    - id: province_copy_in_to_staging_table
+      type: io.kestra.plugin.jdbc.postgresql.CopyIn
+      logLevel: DEBUG
+      format: CSV
+      from: "{{outputs.extract_province.outputFiles['italy_province.csv']}}"
+      table: "italy_province_staging"
+      header: true
+      columns: [date,region_name,region_code,province_name,province_spatial,province_abb,province_code,lat,long,new_cases,total_cases]
+    
+    - id: province_add_unique_id
+      type: io.kestra.plugin.jdbc.postgresql.Queries
+      sql: |
+            UPDATE italy_province_staging
+            SET 
+              unique_row_id = md5(
+                COALESCE(CAST(date AS text), '') ||
+                COALESCE(CAST(region_name AS text), '') || 
+                COALESCE(CAST(region_code AS text), '') || 
+                COALESCE(CAST(province_name AS text), '') || 
+                COALESCE(CAST(province_spatial AS text), '') || 
+                COALESCE(CAST(province_abb AS text), '') || 
+                COALESCE(CAST(lat AS text), '') || 
+                COALESCE(CAST(long AS text), '') || 
+                COALESCE(CAST(new_cases AS text), '') || 
+                COALESCE(CAST(total_cases AS text), '')
+              );
+
+    - id: province_merge_data
+      type: io.kestra.plugin.jdbc.postgresql.Queries
+      sql: |
+            MERGE INTO italy_province AS T
+            USING italy_province_staging AS S
+            ON T.unique_row_id = S.unique_row_id
+            WHEN NOT MATCHED THEN
+              INSERT (
+                unique_row_id, date,region_name,region_code,province_name,province_spatial,province_abb,province_code,lat,long,new_cases,total_cases
+              )
+              VALUES (
+                S.unique_row_id, S.date, S.region_name, S.region_code, S.province_name,
+                S.province_spatial, S.province_abb, S.province_code, S.lat, S.long,
+                S.new_cases, S.total_cases
+              );
+
+
+  - id: if_italy_region
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{inputs.table_name == 'region'}}"
+    then:
+      - id: extract_region
+        type: io.kestra.plugin.scripts.shell.Commands
+        outputFiles:
+          - "*.csv"
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        commands:
+          - wget -qO- https://raw.githubusercontent.com/RamiKrispin/covid19Italy/master/csv/italy_region.csv |
+            awk -F, 'BEGIN {OFS=","} {for (i=1; i<=NF; i++) if ($i == "NA") $i = 0} 1' > italy_region.csv
+
+      - id: region_create_table
+        type: io.kestra.plugin.jdbc.postgresql.Queries
+        sql: |
+              CREATE TABLE IF NOT EXISTS italy_region (
+                  unique_row_id          text,
+                  date                  date,
+                  region_code                integer,
+                  region_name            text,
+                  lat            double precision,
+                  long           double precision,
+                  hospitalized_with_symptoms           integer,
+                  intensive_care   integer,
+                  total_hospitalized              integer,
+                  home_confinement              integer,
+                  cumulative_positive_cases    integer,
+                  daily_positive_cases   integer,
+                  recovered    integer,
+                  death   integer,
+                  positive_clinical_activity    text,
+                  positive_surveys_tests text,
+                  cumulative_cases    integer,
+                  total_tests   integer,
+                  total_people_tested text,
+                  new_intensive_care text,
+                  total_positive_tests text,
+                  total_fast_tests text,
+                  daily_positive_tests text,
+                  daily_fast_tests text,
+                  nuts_code_1 text,
+                  nuts_code_2 text,
+                  region_spatial   text
+                  );
+      - id: region_create_staging_table
+        type: io.kestra.plugin.jdbc.postgresql.Queries
+        sql: |
+              CREATE TABLE IF NOT EXISTS italy_region_staging (
+                  unique_row_id          text,
+                  date                  date,
+                  region_code                integer,
+                  region_name            text,
+                  lat            double precision,
+                  long           double precision,
+                  hospitalized_with_symptoms           integer,
+                  intensive_care   integer,
+                  total_hospitalized              integer,
+                  home_confinement              integer,
+                  cumulative_positive_cases    integer,
+                  daily_positive_cases   integer,
+                  recovered    integer,
+                  death   integer,
+                  positive_clinical_activity    text,
+                  positive_surveys_tests text,
+                  cumulative_cases    integer,
+                  total_tests   integer,
+                  total_people_tested text,
+                  new_intensive_care text,
+                  total_positive_tests text,
+                  total_fast_tests text,
+                  daily_positive_tests text,
+                  daily_fast_tests text,
+                  nuts_code_1 text,
+                  nuts_code_2 text,
+                  region_spatial   text
+                  );
+      - id: region_truncate_staging_table
+        type: io.kestra.plugin.jdbc.postgresql.Queries
+        sql: |
+            TRUNCATE TABLE italy_region_staging;
+
+      - id: region_copy_in_to_staging_table
+        type: io.kestra.plugin.jdbc.postgresql.CopyIn
+        logLevel: DEBUG
+        format: CSV
+        from: "{{outputs.extract_region.outputFiles['italy_region.csv']}}"
+        table: "italy_region_staging"
+        header: true
+        columns: [date,region_code,region_name,lat,long,hospitalized_with_symptoms,intensive_care,total_hospitalized,home_confinement,cumulative_positive_cases,daily_positive_cases,recovered,death,positive_clinical_activity,positive_surveys_tests,cumulative_cases,total_tests,total_people_tested,new_intensive_care,total_positive_tests,total_fast_tests,daily_positive_tests,daily_fast_tests,nuts_code_1,nuts_code_2,region_spatial]
+      
+      - id: region_add_unique_id
+        type: io.kestra.plugin.jdbc.postgresql.Queries
+        sql: |
+              UPDATE italy_region_staging
+              SET 
+                unique_row_id = md5(
+                  COALESCE(CAST(date AS text), '') ||
+                  COALESCE(CAST(region_code AS text), '') || 
+                  COALESCE(CAST(region_name AS text), '') || 
+                  COALESCE(CAST(lat AS text), '') || 
+                  COALESCE(CAST(long AS text), '') || 
+                  COALESCE(CAST(hospitalized_with_symptoms AS text), '') || 
+                  COALESCE(CAST(intensive_care AS text), '') || 
+                  COALESCE(CAST(total_hospitalized AS text), '') || 
+                  COALESCE(CAST(home_confinement AS text), '') || 
+                  COALESCE(CAST(cumulative_positive_cases AS text), '') ||
+                  COALESCE(CAST(daily_positive_cases AS text), '') ||
+                  COALESCE(CAST(recovered AS text), '') ||
+                  COALESCE(CAST(death AS text), '') ||
+                  COALESCE(CAST(positive_clinical_activity AS text), '') ||
+                  COALESCE(CAST(positive_surveys_tests AS text), '') ||
+                  COALESCE(CAST(cumulative_cases AS text), '') ||
+                  COALESCE(CAST(total_tests AS text), '') ||
+                  COALESCE(CAST(total_people_tested AS text), '') ||
+                  COALESCE(CAST(new_intensive_care AS text), '') ||
+                  COALESCE(CAST(total_positive_tests AS text), '') ||
+                  COALESCE(CAST(total_fast_tests AS text), '') ||
+                  COALESCE(CAST(daily_positive_tests AS text), '') ||
+                  COALESCE(CAST(daily_fast_tests AS text), '') ||
+                  COALESCE(CAST(region_spatial AS text), '')
+                );
+
+      - id: region_merge_data
+        type: io.kestra.plugin.jdbc.postgresql.Queries
+        sql: |
+              MERGE INTO italy_region AS T
+              USING italy_region_staging AS S
+              ON T.unique_row_id = S.unique_row_id
+              WHEN NOT MATCHED THEN
+                INSERT (
+                  unique_row_id, date,region_code,region_name,lat,long,hospitalized_with_symptoms,intensive_care,total_hospitalized,home_confinement,cumulative_positive_cases,daily_positive_cases,recovered,death,positive_clinical_activity,positive_surveys_tests,cumulative_cases,total_tests,total_people_tested,new_intensive_care,total_positive_tests,total_fast_tests,daily_positive_tests,daily_fast_tests,nuts_code_1,nuts_code_2,region_spatial
+                )
+                VALUES (
+                  S.unique_row_id, S.date, S.region_code, S.region_name, S.lat,
+                  S.long, S.hospitalized_with_symptoms, S.intensive_care, S.total_hospitalized, S.home_confinement,
+                  S.cumulative_positive_cases, S.daily_positive_cases, S.recovered, S.death, S.positive_clinical_activity, S.positive_surveys_tests, S.cumulative_cases,
+                  S.total_tests, S.total_people_tested, S.new_intensive_care, S.total_positive_tests, S.total_fast_tests, S.daily_positive_tests,
+                  S.daily_fast_tests, S.nuts_code_1, S.nuts_code_2, S.region_spatial
+                );
+
+pluginDefaults:
+  - type: io.kestra.plugin.jdbc.postgresql
+    values:
+      url: jdbc:postgresql://postgres:5432/covid19
+      username: kestra
+      password: k3str4
