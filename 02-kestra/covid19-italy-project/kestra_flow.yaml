@@ -1,4 +1,4 @@
-id: postgres_covid19_generic
+id: postgres_covid19
 namespace: zoomcamp
 inputs:
   - id: table_name
